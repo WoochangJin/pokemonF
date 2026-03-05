@@ -40,3 +40,28 @@
 .read-the-docs {
   color: #888;
 }
+
+.enemyPokemon {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.myDiv {
+  padding: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+}
+
+.IvsBox{
+  padding-top: 2rem;
+}
+
+.enemyDiv {
+  padding: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: row;
+}
