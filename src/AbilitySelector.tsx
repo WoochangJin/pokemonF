@@ -1,31 +1,37 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-
-interface Ability {
-  name: string;
-  enName: string;
-  power: number | null;
-  type: string;
-  url: string;
-}
+import { type Ability, usePokemon, natureChart } from "./context/PokemonContext.tsx";
 
 interface Props {
   pokemonId: number;
+  type: 'my' | 'enemy';
 }
 
-// 컴포넌트 외부에서 캐시 관리 (리렌더링 시에도 데이터 유지)
 const moveCache = new Map<number, Ability[]>();
 
-export default function AbilitySelector({ pokemonId }: Props) {
+export default function AbilitySelector({ pokemonId, type }: Props) {
+  // 1. Context에서 진영별 상태 및 수정 함수 가져오기
+  const {
+    myNature, setMyNature,
+    enemyNature, setEnemyNature,
+    mySelectedMove, setMySelectedMove,
+    enemySelectedMove, setEnemySelectedMove
+  } = usePokemon();
+  
+  const nature = type === 'my' ? myNature : enemyNature;
+  const setNature = type === 'my' ? setMyNature : setEnemyNature;
+  
+  // 현재 진영에 맞는 전역 상태와 세터(Setter) 연결
+  const selectedMove = type === 'my' ? mySelectedMove : enemySelectedMove;
+  const setSelectedMove = type === 'my' ? setMySelectedMove : setEnemySelectedMove;
+  
   const [allPossibleMoves, setAllPossibleMoves] = useState<Ability[]>([]);
-  const [selectedMove, setSelectedMove] = useState<Ability | null>(null);
   const [inputText, setInputText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // 1. 초기화: ID가 바뀌는 즉시 이전 데이터를 비웁니다.
     setAllPossibleMoves([]);
     setSelectedMove(null);
     setInputText("");
@@ -34,19 +40,16 @@ export default function AbilitySelector({ pokemonId }: Props) {
     if (!pokemonId) return;
     
     const fetchAllMoves = async () => {
-      // 2. 캐시 확인
       if (moveCache.has(pokemonId)) {
         setAllPossibleMoves(moveCache.get(pokemonId)!);
         return;
       }
       
-      // 3. API 호출
       setLoading(true);
       try {
         const res = await axios.get(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`);
         const moveList = res.data.moves;
         
-        // 상위 15개 기술의 한글 이름과 타입 정보를 병렬로 가져옴
         const details = await Promise.all(
           moveList.slice(0, 15).map(async (m: any) => {
             try {
@@ -60,7 +63,9 @@ export default function AbilitySelector({ pokemonId }: Props) {
                 enName: m.move.name,
                 power: detailRes.data.power,
                 type: detailRes.data.type.name,
-                url: m.move.url
+                url: m.move.url,
+                // [수정] Calc.tsx의 TS2339 에러를 해결하기 위해 category 필드에 데이터 매핑
+                category: detailRes.data.damage_class.name
               };
             } catch (e) {
               return null;
@@ -69,8 +74,6 @@ export default function AbilitySelector({ pokemonId }: Props) {
         );
         
         const validMoves = details.filter((d): d is Ability => d !== null);
-        
-        // 4. 캐시 저장 및 상태 반영
         moveCache.set(pokemonId, validMoves);
         setAllPossibleMoves(validMoves);
       } catch (err) {
@@ -81,7 +84,7 @@ export default function AbilitySelector({ pokemonId }: Props) {
     };
     
     fetchAllMoves();
-  }, [pokemonId]); // pokemonId 변경을 트리거로 사용
+  }, [pokemonId, setSelectedMove]);
   
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -94,6 +97,7 @@ export default function AbilitySelector({ pokemonId }: Props) {
   }, []);
   
   const handleSelectMove = (move: Ability) => {
+    // [수정] 전달받은 setSelectedMove(setMySelectedMove 또는 setEnemySelectedMove)를 호출
     setSelectedMove(move);
     setInputText(move.name);
     setIsOpen(false);
@@ -104,7 +108,11 @@ export default function AbilitySelector({ pokemonId }: Props) {
   );
   
   return (
-    <div ref={containerRef} style={{ width: '180px', position: 'relative', marginTop: '5px', display: 'inline-block', textAlign: 'left' }}>
+    <div ref={containerRef} style={{
+      width: '180px', position: 'relative', marginTop: '5px', display: 'inline-block', textAlign: 'left',
+      border: '2px solid #444', padding: '5px', borderRadius: '10px'
+    }}>
+      <div style={{textAlign: 'center', fontWeight: 'bold', fontSize: '20px'}}>기술</div>
       <input
         type="text"
         placeholder={loading ? "로딩 중..." : "기술 선택..."}
@@ -115,17 +123,16 @@ export default function AbilitySelector({ pokemonId }: Props) {
           setIsOpen(true);
         }}
         style={{
-          width: '100%', height: '40px', padding: '10px', borderRadius: '5px',
+          width: '100%', height: '50px', padding: '10px', borderRadius: '5px',
           background: '#1e1e1e', color: '#fff', border: '1px solid #333',
-          boxSizing: 'border-box', fontSize: '13px', outline: 'none',
-          marginTop: '40px'
+          boxSizing: 'border-box', fontSize: '13px', outline: 'none'
         }}
         disabled={loading}
       />
       
       {isOpen && !loading && (
         <div style={{
-          position: 'absolute', top: '80px', left: 0, right: 0,
+          position: 'absolute', top: '87px', left: 0, right: 0,
           maxHeight: '180px', overflowY: 'auto', background: '#1e1e1e',
           border: '1px solid #333', borderTop: 'none', zIndex: 9999,
           borderRadius: '0 0 5px 5px', boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
@@ -146,7 +153,7 @@ export default function AbilitySelector({ pokemonId }: Props) {
                 <img
                   src={`https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${m.type}.svg`}
                   alt={m.type}
-                  style={{ width: '20px', height: '20px', filter: 'drop-shadow(0 0 2px rgba(255,255,255,0.3))' }}
+                  style={{ width: '20px', height: '20px', padding: '5px', border : '1px solid #2a2a2a', borderRadius: '5px' }}
                 />
                 <span>{m.name}</span>
               </div>
@@ -168,6 +175,24 @@ export default function AbilitySelector({ pokemonId }: Props) {
           <span style={{ fontWeight: 'bold' }}>위력: {selectedMove.power || '-'}</span>
         </div>
       )}
+      
+      <div style={{ marginTop: '15px', borderTop: '1px solid #333', paddingTop: '10px' }}>
+        <div style={{ textAlign: 'center', fontWeight: 'bold', fontSize: '16px', marginBottom: '5px' }}>성격</div>
+        <select
+          value={nature}
+          onChange={(e) => setNature(e.target.value)}
+          style={{
+            width: '100%', height: '40px', background: '#1e1e1e', color: '#fff',
+            border: '1px solid #333', borderRadius: '5px', padding: '0 10px'
+          }}
+        >
+          {Object.entries(natureChart).map(([key, value]) => (
+            <option key={key} value={key}>
+              {value.name} {value.plus ? `(+${value.plus.slice(0,3)})` : ''}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }

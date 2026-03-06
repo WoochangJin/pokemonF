@@ -4,6 +4,8 @@ import IvsInput from './ivs';
 import './App.css';
 import AbilitySelector from "./AbilitySelector.tsx";
 import TypeList from "./TypeList.tsx";
+import Bs from "./bs.tsx";
+import Calc from "./calc.tsx";
 
 // 1. 실제 UI를 담당하는 컴포넌트 (Provider 내부에서 호출됨)
 function BattleForm() {
@@ -21,25 +23,28 @@ function BattleForm() {
             <PokemonSelector type="enemy" />
             <IvsInput type="enemy" />
             {/* 이제 enemyPokemonId가 바뀔 때마다 key가 변하여 강제 리렌더링됩니다 */}
-            <AbilitySelector key={`enemy-${enemyPokemonId}`} pokemonId={enemyPokemonId} />
+            <AbilitySelector key={`enemy-${enemyPokemonId}`} pokemonId={enemyPokemonId} type="enemy" />
           </div>
-          <div className='typeDiv'>
+          <div className='typeDiv' style={{display: 'flex', flexDirection: 'row'}}>
             <TypeList type="enemy" />
+            <Bs type="enemy" />
+            <Calc type="enemy" />
           </div>
         </div>
         
         {/* 내 포켓몬 섹션 */}
-        <h2>내 포켓몬</h2>
         <div className='myDiv'>
           <h2 style = {{margin: '0', padding: 0}}>Player</h2>
           <div style={{marginBottom: '10px'}}>___________________________________________________________________________</div>
           <div className='selectors'>
             <PokemonSelector type="my" />
             <IvsInput type="my" />
-            <AbilitySelector key={`my-${myPokemonId}`} pokemonId={myPokemonId} />
+            <AbilitySelector key={`my-${myPokemonId}`} pokemonId={myPokemonId} type="my" />
           </div>
-          <div className='typeDiv'>
+          <div className='typeDiv' style={{display: 'flex', flexDirection: 'row'}}>
             <TypeList type="my" />
+            <Bs type="my"/>
+            <Calc type="my" />
           </div>
         </div>
       

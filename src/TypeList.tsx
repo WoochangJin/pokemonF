@@ -58,9 +58,9 @@ export default function TypeList({ type }: { type: 'my' | 'enemy' }) {
     <div style={{
       width: '180px', background: '#1e1e1e', padding: '12px',
       borderRadius: '8px', border: '1px solid #333', marginTop: '10px', textAlign: 'center',
-      color: '#ffcb05', fontWeight: 'bold'
+      color: '#ffcb05', fontWeight: 'bold', marginRight: '10px',
     }}>
-      <div>상성</div>
+      <div style={{borderBottom: "solid 1px ffcb05"}}>상성</div>
       {renderSection("4배", effectiveness[4], "#ff4444")}
       {renderSection("2배", effectiveness[2], "#ff8800")}
       {renderSection("0.5배", effectiveness[0.5], "#00ccff")}

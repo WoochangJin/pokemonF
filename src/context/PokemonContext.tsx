@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import axios from 'axios';
 
+// --- 인터페이스 정의 ---
 export interface Pokemon {
   id: number;
   koName: string;
@@ -8,9 +9,26 @@ export interface Pokemon {
   types: string[];
 }
 
+interface PokemonResponse {
+  id: number;
+  koName: string;
+  enName: string;
+  type1: string;
+  type2: string | null;
+}
+
 export interface Ivs {
   hp: number; attack: number; defense: number;
   specialAttack: number; specialDefense: number; speed: number;
+}
+
+export interface Ability {
+  name: string;
+  enName: string;
+  power: number | null;
+  type: string;
+  url: string;
+  category: string;
 }
 
 interface PokemonContextType {
@@ -23,15 +41,25 @@ interface PokemonContextType {
   setMyIvs: (ivs: Ivs) => void;
   enemyIvs: Ivs;
   setEnemyIvs: (ivs: Ivs) => void;
+  myNature: string;
+  setMyNature: (nature: string) => void;
+  enemyNature: string;
+  setEnemyNature: (nature: string) => void;
+  myLevel: number;
+  setMyLevel: (level: number) => void;
+  enemyLevel: number;
+  setEnemyLevel: (level: number) => void;
+  // [추가] 진영별 선택된 기술 상태
+  mySelectedMove: Ability | null;
+  setMySelectedMove: (move: Ability | null) => void;
+  enemySelectedMove: Ability | null;
+  setEnemySelectedMove: (move: Ability | null) => void;
   loading: boolean;
 }
 
-const defaultIvs: Ivs = {
-  hp: 31, attack: 31, defense: 31,
-  specialAttack: 31, specialDefense: 31, speed: 31
-};
+// --- 유틸리티 데이터 및 함수 (기존과 동일) ---
+const defaultIvs: Ivs = { hp: 31, attack: 31, defense: 31, specialAttack: 31, specialDefense: 31, speed: 31 };
 
-// 상성표와 배율 함수는 그대로 유지
 // eslint-disable-next-line react-refresh/only-export-components
 export const typeChart: Record<string, Record<string, number>> = {
   normal: { rock: 0.5, ghost: 0, steel: 0.5 },
@@ -54,12 +82,18 @@ export const typeChart: Record<string, Record<string, number>> = {
   fairy: { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 },
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const getDamageMultiplier = (moveType: string, targetTypes: string[]): number => {
   return targetTypes.reduce((multiplier, targetType) => {
     const typeRow = typeChart[moveType.toLowerCase()];
     const effectiveness = typeRow ? (typeRow[targetType.toLowerCase()] ?? 1) : 1;
     return multiplier * effectiveness;
   }, 1);
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const natureChart: Record<string, { plus?: string; minus?: string; name: string }> = {
+  hardy: { name: "노력" }, lonely: { plus: "attack", minus: "defense", name: "외로움" }, adamant: { plus: "attack", minus: "specialAttack", name: "고집" }, naughty: { plus: "attack", minus: "specialDefense", name: "개구쟁이" }, brave: { plus: "attack", minus: "speed", name: "용감" }, bold: { plus: "defense", minus: "attack", name: "대담" }, docile: { name: "온순" }, impish: { plus: "defense", minus: "specialAttack", name: "장난꾸러기" }, lax: { plus: "defense", minus: "specialDefense", name: "촐랑" }, relaxed: { plus: "defense", minus: "speed", name: "무사태평" }, modest: { plus: "specialAttack", minus: "attack", name: "조심" }, mild: { plus: "specialAttack", minus: "defense", name: "의젓" }, bashful: { name: "수줍음" }, rash: { plus: "specialAttack", minus: "specialDefense", name: "덜렁" }, quiet: { plus: "specialAttack", minus: "speed", name: "냉정" }, calm: { plus: "specialDefense", minus: "attack", name: "차분" }, gentle: { plus: "specialDefense", minus: "defense", name: "얌전" }, careful: { plus: "specialDefense", minus: "specialAttack", name: "신중" }, quirky: { name: "변덕" }, sassy: { plus: "specialDefense", minus: "speed", name: "건방" }, timid: { plus: "speed", minus: "attack", name: "겁쟁이" }, hasty: { plus: "speed", minus: "defense", name: "성급" }, jolly: { plus: "speed", minus: "specialAttack", name: "명랑" }, naive: { plus: "speed", minus: "specialDefense", name: "천진난만" }, serious: { name: "성실" },
 };
 
 const PokemonContext = createContext<PokemonContextType | undefined>(undefined);
@@ -71,25 +105,27 @@ export const PokemonProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [myIvs, setMyIvs] = useState<Ivs>(defaultIvs);
   const [enemyIvs, setEnemyIvs] = useState<Ivs>(defaultIvs);
+  const [myNature, setMyNature] = useState<string>("hardy");
+  const [enemyNature, setEnemyNature] = useState<string>("hardy");
+  const [myLevel, setMyLevel] = useState<number>(50);
+  const [enemyLevel, setEnemyLevel] = useState<number>(50);
+  
+  // [수정] 진영별 기술 상태를 Provider 내부에서 관리
+  const [mySelectedMove, setMySelectedMove] = useState<Ability | null>(null);
+  const [enemySelectedMove, setEnemySelectedMove] = useState<Ability | null>(null);
   
   useEffect(() => {
-    // [수정] axios 요청 후 데이터를 mappedData로 변환하여 저장
-    axios.get('http://localhost:8080/api/pokemon/names')
+    axios.get<PokemonResponse[]>('https://pokemonb.onrender.com/api/pokemon/names')
       .then(res => {
-        const mappedData = res.data.map((p: any) => ({
+        const mappedData = res.data.map((p) => ({
           id: p.id,
           koName: p.koName,
           enName: p.enName,
-          // 백엔드 PokemonNameDto의 type1, type2 필드를 배열로 변환
-          types: [p.type1, p.type2].filter(t => t !== null && t !== undefined)
+          types: [p.type1, p.type2].filter((t): t is string => t !== null && t !== undefined)
         }));
         setPokemons(mappedData);
         setLoading(false);
       })
-      .catch(err => {
-        console.error("데이터 로드 실패:", err);
-        setLoading(false);
-      });
   }, []);
   
   return (
@@ -99,6 +135,13 @@ export const PokemonProvider = ({ children }: { children: ReactNode }) => {
       enemyPokemonId, setEnemyPokemonId,
       myIvs, setMyIvs,
       enemyIvs, setEnemyIvs,
+      myNature, setMyNature,
+      enemyNature, setEnemyNature,
+      myLevel, setMyLevel,
+      enemyLevel, setEnemyLevel,
+      // [추가] 벨류 넘겨주기
+      mySelectedMove, setMySelectedMove,
+      enemySelectedMove, setEnemySelectedMove,
       loading
     }}>
       {children}
@@ -106,6 +149,7 @@ export const PokemonProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const usePokemon = () => {
   const context = useContext(PokemonContext);
   if (!context) throw new Error("usePokemon must be used within a PokemonProvider");

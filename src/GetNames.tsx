@@ -52,8 +52,15 @@ export default function PokemonSelector({ type }: Props) {
   
   if (loading) return <div style={{ color: '#fff' }}>로딩 중...</div>;
   
+  const currentPokemon = pokemons.find(p => p.id === selectedId);
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  const targetTypes = currentPokemon.types;
+  
   return (
-    <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', position: 'relative' }}>
+    <div ref={containerRef} style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', position: 'relative'
+    }}>
       
       {/* 이미지 카드 */}
       <div style={{
@@ -69,31 +76,59 @@ export default function PokemonSelector({ type }: Props) {
       </div>
       
       {/* 커스텀 검색창 영역 */}
-      <div style={{ width: '180px', position: 'relative' }}>
-        <input
-          type="text"
-          placeholder="이름/번호 검색"
-          value={inputText}
-          onFocus={() => {
-            setIsOpen(true);
-            // [수정] 클릭 시 입력창을 비워 전체 리스트가 바로 보이게 함
-            setInputText("");
-          }}
-          onChange={(e) => {
-            setInputText(e.target.value);
-            setIsOpen(true);
-          }}
-          style={{
-            padding: '10px',
-            borderRadius: '5px',
-            border: '1px solid #333',
-            width: '100%',
-            boxSizing: 'border-box',
-            backgroundColor: '#1e1e1e',
-            color: '#fff',
-            outline: 'none'
-          }}
-        />
+      <div style={{ width: '200px', position: 'relative' }}>
+        <div style={{display: 'flex', flexDirection: 'row', alignItems: 'center'}}>
+          <input
+            type="text"
+            placeholder="이름/번호 검색"
+            value={inputText}
+            onFocus={() => {
+              setIsOpen(true);
+              // [수정] 클릭 시 입력창을 비워 전체 리스트가 바로 보이게 함
+              setInputText("");
+            }}
+            onChange={(e) => {
+              setInputText(e.target.value);
+              setIsOpen(true);
+            }}
+            style={{
+              padding: '10px',
+              borderRadius: '5px',
+              border: '1px solid #333',
+              width: '50%',
+              boxSizing: 'border-box',
+              backgroundColor: '#1e1e1e',
+              color: '#fff',
+              outline: 'none',
+              fontWeight: 'bold'
+            }}
+          />
+          
+          <div style={{
+            width: '40%',height: '35px', position: 'relative',
+            border: '1px solid #333', borderRadius: '5px', marginLeft: '10%',
+            display: 'flex', flexDirection: 'row', alignItems: 'center'
+          }}>
+            {targetTypes.length > 0 ? (
+              targetTypes.map((type) => (
+                <div key={type}
+                     style={{width: '30px', marginTop: '4px', marginLeft: '10px', marginRight: '10px'}}
+                >
+                  <img
+                    src={`https://raw.githubusercontent.com/duiker101/pokemon-type-svg-icons/master/icons/${type}.svg`}
+                    style={{width: '20px'}}
+                  />
+                </div>
+              ))
+            
+            ): (
+              <div>
+                X
+              </div>
+            )
+            }
+          </div>
+        </div>
         
         {/* [수정] inputText !== "" 조건을 제거하여 클릭만 해도 리스트가 뜨게 함 */}
         {isOpen && (
@@ -130,7 +165,8 @@ export default function PokemonSelector({ type }: Props) {
                     background: '#1e1e1e',
                     color: '#fff',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    fontWeight: 'bold'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333333'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1e1e1e'}
