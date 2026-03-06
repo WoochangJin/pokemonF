@@ -51,7 +51,7 @@ export default function AbilitySelector({ pokemonId, type }: Props) {
         const moveList = res.data.moves;
         
         const details = await Promise.all(
-          moveList.slice(0, 15).map(async (m: any) => {
+          moveList.map(async (m: any) => {
             try {
               const detailRes = await axios.get(m.move.url);
               const koName = detailRes.data.names.find(
