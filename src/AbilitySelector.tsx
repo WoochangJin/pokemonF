@@ -188,7 +188,7 @@ export default function AbilitySelector({ pokemonId, type }: Props) {
         >
           {Object.entries(natureChart).map(([key, value]) => (
             <option key={key} value={key}>
-              {value.name} {value.plus ? `(+${value.plus.slice(0,3)})` : ''}
+              {value.name} {value.plus ? `(+${value.plus} | -${value.minus})` : ''}
             </option>
           ))}
         </select>
