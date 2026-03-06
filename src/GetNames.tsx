@@ -7,22 +7,22 @@ interface Props {
 
 export default function PokemonSelector({ type }: Props) {
   const { pokemons, myPokemonId, setMyPokemonId, enemyPokemonId, setEnemyPokemonId, loading } = usePokemon();
-
+  
   const isMy = type === 'my';
   const selectedId = isMy ? myPokemonId : enemyPokemonId;
   const setSelectedId = isMy ? setMyPokemonId : setEnemyPokemonId;
-
+  
   const [inputText, setInputText] = useState("");
   const [isOpen, setIsOpen] = useState(false);
-
-  // 1. 바깥쪽 클릭 감지를 위한 Ref 생성
+  
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const filtered = pokemons.filter(p => 
+  
+  // [수정] 검색어가 없으면 ID 순서대로 전체 노출, 검색어가 있으면 필터링
+  // pokemons 데이터는 이미 ID 순서로 정렬되어 있다고 가정합니다.
+  const filtered = pokemons.filter(p =>
     p.koName.includes(inputText) || p.id.toString().includes(inputText)
   );
-
-  // 2. 바깥쪽 클릭 시 닫기 로직
+  
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -32,74 +32,71 @@ export default function PokemonSelector({ type }: Props) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
+  
   useEffect(() => {
     const handleEnter = (e: KeyboardEvent) => {
-      // 1. 엔터 키를 눌렀고, 검색 결과(filtered)가 있을 때만 실행
-      if (e.key === 'Enter' && filtered.length > 0) {
+      if (e.key === 'Enter' && filtered.length > 0 && isOpen) {
         const firstPokemon = filtered[0];
         setSelectedId(firstPokemon.id);
         setInputText(firstPokemon.koName);
         setIsOpen(false);
-        
-        // 선택 후 입력창 포커스를 해제하고 싶다면 추가
         (document.activeElement as HTMLElement)?.blur();
       }
     };
-
-    // 2. 이벤트 등록
-    document.addEventListener('keydown', handleEnter);
     
-    // 3. 의존성 배열에 필요한 상태들을 넣어줍니다.
-    // 이 값들이 변할 때마다 리스너가 최신 값을 참조할 수 있게 재등록됩니다.
+    document.addEventListener('keydown', handleEnter);
     return () => {
       document.removeEventListener('keydown', handleEnter);
     };
-  }, [filtered, setSelectedId, setInputText, setIsOpen]);
-
-  if (loading) return <div>로딩 중...</div>;
-
+  }, [filtered, setSelectedId, setInputText, setIsOpen, isOpen]);
+  
+  if (loading) return <div style={{ color: '#fff' }}>로딩 중...</div>;
+  
   return (
-    // 3. 최상위 div에 ref 연결
     <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', position: 'relative' }}>
       
       {/* 이미지 카드 */}
-      <div style={{ 
-        width: '200px', height: '200px', 
-        border: '1px solid #ddd', borderRadius: '10px',
+      <div style={{
+        width: '200px', height: '200px',
+        border: '1px solid #333', borderRadius: '10px',
         backgroundColor: '#fff', display: 'flex', justifyContent: 'center', alignItems: 'center'
       }}>
-        <img 
+        <img
           src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${selectedId}.png`}
-          alt="pokemon" 
+          alt="pokemon"
           style={{ width: '90%', height: '90%', objectFit: 'contain' }}
         />
       </div>
-
+      
       {/* 커스텀 검색창 영역 */}
       <div style={{ width: '180px', position: 'relative' }}>
         <input
           type="text"
           placeholder="이름/번호 검색"
           value={inputText}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            // [수정] 클릭 시 입력창을 비워 전체 리스트가 바로 보이게 함
+            setInputText("");
+          }}
           onChange={(e) => {
             setInputText(e.target.value);
             setIsOpen(true);
           }}
-          style={{ 
-            padding: '10px', 
-            borderRadius: '5px', 
-            border: '1px solid #ccc',
+          style={{
+            padding: '10px',
+            borderRadius: '5px',
+            border: '1px solid #333',
             width: '100%',
             boxSizing: 'border-box',
-            backgroundColor: '#1e1e1e', // 배경색 적용
-            color: '#fff'              // 글자색 적용
+            backgroundColor: '#1e1e1e',
+            color: '#fff',
+            outline: 'none'
           }}
         />
-
-        {/* 2. 검색 결과 리스트 (div 구조 반영) */}
-        {isOpen && inputText !== "" && (
+        
+        {/* [수정] inputText !== "" 조건을 제거하여 클릭만 해도 리스트가 뜨게 함 */}
+        {isOpen && (
           <div style={{
             position: 'absolute',
             top: '100%',
@@ -108,15 +105,16 @@ export default function PokemonSelector({ type }: Props) {
             maxHeight: '200px',
             overflowY: 'auto',
             border: '1px solid #333',
+            borderTop: 'none',
             borderRadius: '0 0 5px 5px',
             zIndex: 1000,
-            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+            boxShadow: '0 4px 6px rgba(0,0,0,0.5)',
             background: '#1e1e1e',
           }}>
             {filtered.length > 0 ? (
               filtered.map((p) => (
-                <div 
-                  className='searchLi' 
+                <div
+                  className='searchLi'
                   key={p.id}
                   onClick={() => {
                     setSelectedId(p.id);
@@ -126,20 +124,27 @@ export default function PokemonSelector({ type }: Props) {
                   style={{
                     padding: '10px',
                     cursor: 'pointer',
-                    borderBottom: '1px solid #333',
-                    fontSize: '16px',
+                    borderBottom: '1px solid #2a2a2a',
+                    fontSize: '14px',
                     textAlign: 'left',
                     background: '#1e1e1e',
-                    color: '#fff' // 텍스트가 잘 보이도록 흰색 설정
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333333'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#1e1e1e'}
                 >
-                  <span style={{ color: '#ffcb05', marginRight: '5px' }}>No.{p.id}</span> {p.koName}
+                  <span style={{ color: '#ffcb05', marginRight: '8px', fontWeight: 'bold', minWidth: '45px' }}>
+                    No.{p.id}
+                  </span>
+                  {p.koName}
                 </div>
               ))
             ) : (
-              <div style={{ padding: '10px', color: '#999', background: '#1e1e1e' }}>결과가 없습니다.</div>
+              <div style={{ padding: '10px', color: '#666', background: '#1e1e1e', textAlign: 'center' }}>
+                결과가 없습니다.
+              </div>
             )}
           </div>
         )}
