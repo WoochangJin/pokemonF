@@ -107,7 +107,7 @@ export default function PokemonSelector({ type }: Props) {
           <div style={{
             width: '40%',height: '35px', position: 'relative',
             border: '1px solid #333', borderRadius: '5px', marginLeft: '10%',
-            display: 'flex', flexDirection: 'row', alignItems: 'center'
+            display: 'flex', flexDirection: 'row', alignItems: 'center', backgroundColor: '#1e1e1e'
           }}>
             {targetTypes.length > 0 ? (
               targetTypes.map((type) => (
