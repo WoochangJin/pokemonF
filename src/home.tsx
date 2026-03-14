@@ -13,6 +13,7 @@ function BattleForm() {
   
   return (
     <div style={{ padding: '40px', textAlign: 'center' }}>
+      
       <div style={{ display: 'flex', justifyContent: 'center', gap: '50px', marginTop: '30px', flexDirection: 'column' }}>
         
         {/* 상대 포켓몬 섹션 */}
